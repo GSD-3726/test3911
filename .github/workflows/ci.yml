@@ -1,20 +1,22 @@
+# .github/workflows/sync-gitee.yml
 name: Sync GitHub to Gitee
 on:
   push:
-    branches: [ main ]
+    branches: [main]
   schedule:
-    - cron: '0 */3 * * *'  # 每3小时同步一次
+    - cron: '0 */3 * * *'  # 每3小时同步
 jobs:
   sync:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-      - name: Sync to Gitee
-        uses: wearerequired/git-mirror-action@v2
-        env:
-          SSH_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+      - name: Mirror to Gitee
+        uses: Yikun/hub-mirror-action@v1.3
         with:
-          source-repo: ${{ github.event.repository.clone_url }}
-          destination-repo: ${{ secrets.GITEE_REPO_URL }}
-          force-push: true  # 强制推送（根据需求启用）
+          src: github/GSD-3726/test3911  # GitHub源仓库
+          dst: gitee/bmg369/test          # Gitee目标仓库
+          dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}  # SSH私钥
+          dst_token: ${{ secrets.GITEE_TOKEN }}      # Gitee API Token
+          force_update: true              # 强制同步
+          debug: true                     # 调试模式
