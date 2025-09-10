@@ -1,33 +1,20 @@
-name: fetch
+name: Sync GitHub to Gitee
 on:
   push:
-    branches: [main]
+    branches: [ main ]
   schedule:
-    - cron: '0 */3 * * *'
+    - cron: '0 */3 * * *'  # 每3小时同步一次
 jobs:
-  fetchurl:
+  sync:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Setup Node
-        uses: actions/setup-node@v3
-        with:
-          node-version: 21.5.0
-      - name: Install & Run
-        run: |
-          npm config set registry https://registry.npmmirror.com
-          npm install
-          node fetchURLByAndroidV2.js
-      - name: Git Config
-        run: |
-          git config user.name "GitHub Actions"
-          git config user.email "actions@github.com"
-      - name: Commit & Push
+      - name: Checkout code
+        uses: actions/checkout@v4
+      - name: Sync to Gitee
+        uses: wearerequired/git-mirror-action@v2
         env:
-          GITEE_TOKEN: ${{ secrets.GITEE_TOKEN }}
-        run: |
-          git add .
-          git commit -m "Update by GitHub Actions" || exit 0
-          git remote add gitee https://dream-deve:$GITEE_TOKEN@gitee.com/bmg369/test.git
-          git push gitee main
+          SSH_PRIVATE_KEY: ${{ secrets.GITEE_PRIVATE_KEY }}
+        with:
+          source-repo: ${{ github.event.repository.clone_url }}
+          destination-repo: ${{ secrets.GITEE_REPO_URL }}
+          force-push: true  # 强制推送（根据需求启用）
