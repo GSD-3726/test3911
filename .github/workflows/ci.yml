@@ -4,13 +4,15 @@ on:
   push:
     branches: ["main"]
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次
-  workflow_dispatch:       # 允许手动触发
+    - cron: '0 */6 * * *'
+  workflow_dispatch:
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-
+    permissions:
+      contents: write  # 确保有写入权限:cite[9]
+    
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
@@ -26,60 +28,29 @@ jobs:
           package-lock.json
           v1/package-lock.json
 
-    # 设置环境变量以避免 Chromium 下载问题
-    - name: Set environment variables
-      run: |
-        echo "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=0" >> $GITHUB_ENV
-        echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser" >> $GITHUB_ENV
-
-    # 安装系统依赖（包括 Chromium）
     - name: Install system dependencies
       run: |
         sudo apt-get update
         sudo apt-get install -y chromium-browser
 
-    # 安装依赖 - 使用淘宝镜像加速下载
     - name: Install dependencies
       run: |
         npm config set registry https://registry.npmmirror.com/
         npm ci
-        
-        # 检查 puppeteer 是否已安装，如果没有则安装
         if ! npm list puppeteer; then
           echo "Installing puppeteer..."
           npm install puppeteer --save
         fi
 
-    # 创建符号链接，使 v1/utils 指向根目录的 utils
     - name: Create symbolic links
       run: |
-        # 删除可能已存在的 v1/utils 目录或文件
         rm -rf v1/utils
-        # 创建符号链接
         ln -s ../utils v1/utils
-        echo "Symbolic link created:"
-        ls -la v1/
-
-    # 调试步骤，列出文件结构和已安装的模块
-    - name: Debug - List project structure and dependencies
-      run: |
-        echo "Project root:"
-        ls -la
-        echo "v1 directory:"
-        ls -la v1/
-        echo "utils directory:"
-        ls -la utils/
-        echo "Check if symbolic link works:"
-        ls -la v1/utils/fetchList.js || echo "Symbolic link not working"
-        echo "Check if puppeteer is installed:"
-        npm list puppeteer
 
     - name: Run Script
       working-directory: ./v1
       run: node fetchURL.js
       env:
-        CUSTOM_VAR: 'value'
-        # 设置 Chromium 可执行路径
         PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
 
     - name: Commit and push changes
@@ -90,9 +61,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add v1/interface.txt
           git commit -m "chore: auto-update by GitHub Actions"
-          git push
+          # 使用 PAT 进行推送
+          git push https://${{ secrets.PAT_TOKEN }}@github.com/GSD-3726/test3911.git main
         else
           echo "No changes to commit."
         fi
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
