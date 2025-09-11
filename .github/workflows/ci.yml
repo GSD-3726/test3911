@@ -4,8 +4,8 @@ on:
   push:
     branches: ["main"]
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:       # 允许手动触发
 
 jobs:
   run-script:
@@ -27,62 +27,53 @@ jobs:
           v1/package-lock.json
           utils/package-lock.json
 
-    # 关键修改：先尝试 npm ci，失败时回退到 npm install
+    # 安装依赖
     - name: Install root dependencies
-      run: |
-        if [ -f package-lock.json ]; then
-          npm ci
-        else
-          npm install
-        fi
+      run: npm ci
 
     - name: Install v1 dependencies
       working-directory: ./v1
-      run: |
-        if [ -f package-lock.json ]; then
-          npm ci
-        else
-          npm install
-        fi
+      run: npm ci
 
     - name: Install utils dependencies
       working-directory: ./utils
-      run: |
-        if [ -f package-lock.json ]; then
-          npm ci
-        else
-          npm install
-        fi
+      run: npm ci
 
-    # 确保 NODE_PATH 正确指向 utils 目录
-    - name: Set NODE_PATH environment variable
-      run: echo "NODE_PATH=$GITHUB_WORKSPACE/utils" >> $GITHUB_ENV
+    # 创建符号链接，使 v1/utils 指向根目录的 utils
+    - name: Create symbolic link
+      run: ln -s ../utils v1/utils
 
-    # 调试步骤：验证路径和文件存在性
-    - name: Debug - Verify paths and files
+    # 调试步骤，列出文件结构确认路径是否正确
+    - name: Debug - List project structure
       run: |
-        echo "NODE_PATH: $NODE_PATH"
-        echo "Utils directory exists: $([ -d utils ] && echo 'YES' || echo 'NO')"
-        echo "fetchList.js exists: $([ -f utils/fetchList.js ] && echo 'YES' || echo 'NO')"
-        echo "v1/fetchURL.js content: $(head -n 3 v1/fetchURL.js)"
+        echo "Project root:"
+        ls -la
+        echo "v1 directory:"
+        ls -la v1/
+        echo "utils directory:"
+        ls -la utils/
+        echo "Check if fetchList.js exists:"
+        find . -name "fetchList.js" -type f
+        echo "Check if symbolic link exists:"
+        ls -la v1/utils/
 
     - name: Run Script
       working-directory: ./v1
       run: node fetchURL.js
       env:
-        NODE_PATH: ${{ env.NODE_PATH }}
+        CUSTOM_VAR: 'value'
 
     - name: Commit and push changes
       if: always()
       run: |
-        git config user.name "github-actions[bot]"
-        git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-        git add v1/interface.txt
-        if git diff --staged --quiet; then
-          echo "No changes to commit"
-        else
+        if ! git diff --quiet; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add v1/interface.txt
           git commit -m "chore: auto-update by GitHub Actions"
           git push
+        else
+          echo "No changes to commit."
         fi
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
