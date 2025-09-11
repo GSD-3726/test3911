@@ -1,42 +1,48 @@
-name: Run FetchURL Script on Node.js 21.5.0
+name: Run Node.js Script
 
 on:
+  push:
+    branches: [ "main" ]
   schedule:
-    - cron: '0 */3 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # 每6小时运行一次，按需调整:cite[7]
+  workflow_dispatch:       # 允许手动触发:cite[2]
 
 jobs:
-  run-fetch-script:
+  run-script:
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: . # 明确设置工作目录为仓库根目录:cite[7]
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+    - name: Checkout code
+      uses: actions/checkout@v4
 
-      - name: Setup Node.js 21.5.0
-        uses: actions/setup-node@v4
-        with:
-          node-version: '21.5.0'
-          cache: 'npm'
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '21.5.0'
+        cache: 'npm'
 
-      - name: Install Chromium dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y chromium-browser
+    - name: Install dependencies
+      run: npm ci
 
-      - name: Install npm dependencies
-        run: npm ci --include=optional
-        working-directory: ./v1
+    - name: Run Script in v1 directory
+      run: node v1/fetchURL.js  # 根据你的脚本实际路径调整
+      env:
+        # 如有需要，可在此处添加其他环境变量
+        CUSTOM_VAR: 'value'
 
-      - name: Run fetchURL.js script
-        run: node fetchURL.js
-        working-directory: ./v1
-        env:
-          API_KEY: ${{ secrets.API_KEY }}
-          SOME_URL: ${{ secrets.SOME_URL }}
-
-      - name: Upload generated interface.txt
-        uses: actions/upload-artifact@v4
-        with:
-          name: interface-file
-          path: v1/interface.txt
+    - name: Commit and push changes if any
+      run: |
+        if ! git diff --quiet; then
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore: auto-update by GitHub Actions"
+          git push
+        else
+          echo "No changes to commit."
+        fi
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
