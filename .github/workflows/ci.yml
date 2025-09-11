@@ -4,14 +4,14 @@ on:
   push:
     branches: ["main"]
   schedule:
-    - cron: '0 */6 * * *'
-  workflow_dispatch:
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:       # 允许手动触发
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
     permissions:
-      contents: write  # 确保有写入权限:cite[9]
+      contents: write  # 确保有写入权限
     
     steps:
     - name: Checkout repository
@@ -26,7 +26,6 @@ jobs:
         cache: 'npm'
         cache-dependency-path: |
           package-lock.json
-          v1/package-lock.json
 
     - name: Install system dependencies
       run: |
@@ -42,14 +41,22 @@ jobs:
           npm install puppeteer --save
         fi
 
-    - name: Create symbolic links
-      run: |
-        rm -rf v1/utils
-        ln -s ../utils v1/utils
+    # 注释掉了创建符号链接的步骤，因为不再需要运行 v1/fetchURL.js
+    # - name: Create symbolic links
+    #   run: |
+    #     rm -rf v1/utils
+    #     ln -s ../utils v1/utils
 
-    - name: Run Script
-      working-directory: ./v1
-      run: node fetchURL.js
+    # 注释掉了运行 v1/fetchURL.js 的步骤
+    # - name: Run Script
+    #   working-directory: ./v1
+    #   run: node fetchURL.js
+    #   env:
+    #     PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
+
+    # 改为运行根目录下的 fetchURLByAndroidV2.js
+    - name: Run fetchURLByAndroidV2.js
+      run: node fetchURLByAndroidV2.js
       env:
         PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
 
@@ -59,7 +66,8 @@ jobs:
         if ! git diff --quiet; then
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add v1/interface.txt
+          # 根据 fetchURLByAndroidV2.js 的输出文件调整这里
+          git add interface.txt  # 假设输出文件在根目录
           git commit -m "chore: auto-update by GitHub Actions"
           # 使用 PAT 进行推送
           git push https://${{ secrets.PAT_TOKEN }}@github.com/GSD-3726/test3911.git main
