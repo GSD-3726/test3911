@@ -16,14 +16,6 @@ jobs:
       uses: actions/checkout@v4
       with:
         fetch-depth: 0
-        path: test3911  # 明确检出到test3911目录
-
-    # 新增步骤：生成package-lock.json
-    - name: Generate lock files
-      working-directory: test3911
-      run: |
-        npm install --prefix ./utils
-        npm install --prefix ./v1
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
@@ -31,24 +23,29 @@ jobs:
         node-version: '21.5.0'
         cache: 'npm'
         cache-dependency-path: |
-          test3911/utils/package-lock.json
-          test3911/v1/package-lock.json
+          package-lock.json
+          v1/package-lock.json
+          utils/package-lock.json
 
-    - name: Install dependencies (clean)
-      working-directory: test3911
-      run: |
-        npm ci --prefix ./utils
-        npm ci --prefix ./v1
+    - name: Install root dependencies
+      run: npm ci
+
+    - name: Install v1 dependencies
+      working-directory: ./v1
+      run: npm ci
+
+    - name: Install utils dependencies
+      working-directory: ./utils
+      run: npm ci
 
     - name: Run Script
-      working-directory: test3911/v1
+      working-directory: ./v1
       run: node fetchURL.js
       env:
         CUSTOM_VAR: 'value'
 
     - name: Commit and push changes
       if: always()
-      working-directory: test3911
       run: |
         if ! git diff --quiet; then
           git config user.name "github-actions[bot]"
