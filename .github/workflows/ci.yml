@@ -27,28 +27,50 @@ jobs:
           v1/package-lock.json
           utils/package-lock.json
 
-    - name: Install dependencies
+    # 关键修改：先尝试 npm ci，失败时回退到 npm install
+    - name: Install root dependencies
       run: |
-        npm ci
-        npm ci --prefix v1
-        npm ci --prefix utils
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
 
-    # 关键修改：确保NODE_PATH包含根目录下的utils
-    - name: Set NODE_PATH
+    - name: Install v1 dependencies
+      working-directory: ./v1
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
+
+    - name: Install utils dependencies
+      working-directory: ./utils
+      run: |
+        if [ -f package-lock.json ]; then
+          npm ci
+        else
+          npm install
+        fi
+
+    # 确保 NODE_PATH 正确指向 utils 目录
+    - name: Set NODE_PATH environment variable
       run: echo "NODE_PATH=$GITHUB_WORKSPACE/utils" >> $GITHUB_ENV
 
-    - name: Debug - Verify paths
+    # 调试步骤：验证路径和文件存在性
+    - name: Debug - Verify paths and files
       run: |
         echo "NODE_PATH: $NODE_PATH"
-        echo "Current directory: $(pwd)"
         echo "Utils directory exists: $([ -d utils ] && echo 'YES' || echo 'NO')"
         echo "fetchList.js exists: $([ -f utils/fetchList.js ] && echo 'YES' || echo 'NO')"
+        echo "v1/fetchURL.js content: $(head -n 3 v1/fetchURL.js)"
 
     - name: Run Script
       working-directory: ./v1
       run: node fetchURL.js
       env:
-        NODE_PATH: ${{ env.NODE_PATH }}  # 继承之前设置的环境变量
+        NODE_PATH: ${{ env.NODE_PATH }}
 
     - name: Commit and push changes
       if: always()
