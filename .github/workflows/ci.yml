@@ -2,43 +2,52 @@ name: Run Node.js Script
 
 on:
   push:
-    branches: [ "main" ]
+    branches: ["main"]
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时运行一次，按需调整:cite[7]
-  workflow_dispatch:       # 允许手动触发:cite[2]
+    - cron: '0 */6 * * *'  # 每6小时运行一次
+  workflow_dispatch:       # 允许手动触发
 
 jobs:
   run-script:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: . # 明确设置工作目录为仓库根目录:cite[7]
 
     steps:
-    - name: Checkout code
+    - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        path: test3911  # 明确检出到test3911目录
 
     - name: Setup Node.js
       uses: actions/setup-node@v4
       with:
         node-version: '21.5.0'
         cache: 'npm'
+        cache-dependency-path: |
+          test3911/package-lock.json
+          test3911/utils/package-lock.json
+          test3911/v1/package-lock.json
 
     - name: Install dependencies
-      run: npm ci
+      working-directory: test3911  # 所有路径基于此目录
+      run: |
+        npm ci --prefix ./utils
+        npm ci --prefix ./v1
 
-    - name: Run Script in v1 directory
-      run: node v1/fetchURL.js  # 根据你的脚本实际路径调整
+    - name: Run Script
+      working-directory: test3911/v1
+      run: node fetchURL.js
       env:
-        # 如有需要，可在此处添加其他环境变量
         CUSTOM_VAR: 'value'
 
-    - name: Commit and push changes if any
+    - name: Commit and push changes
+      if: always()
+      working-directory: test3911
       run: |
         if ! git diff --quiet; then
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add .
+          git add v1/interface.txt
           git commit -m "chore: auto-update by GitHub Actions"
           git push
         else
