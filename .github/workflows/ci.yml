@@ -38,6 +38,15 @@ jobs:
       working-directory: ./utils
       run: npm ci
 
+    - name: Debug List files
+      run: |
+        echo "Listing project structure:"
+        ls -la
+        echo "Listing v1 directory:"
+        ls -la v1/
+        echo "Listing utils directory:"
+        ls -la utils/
+
     - name: Run Script
       working-directory: ./v1
       run: node fetchURL.js
