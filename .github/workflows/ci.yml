@@ -50,6 +50,16 @@ jobs:
           npm install puppeteer --save
         fi
 
+    # 创建符号链接，使 v1/utils 指向根目录的 utils
+    - name: Create symbolic links
+      run: |
+        # 删除可能已存在的 v1/utils 目录或文件
+        rm -rf v1/utils
+        # 创建符号链接
+        ln -s ../utils v1/utils
+        echo "Symbolic link created:"
+        ls -la v1/
+
     # 调试步骤，列出文件结构和已安装的模块
     - name: Debug - List project structure and dependencies
       run: |
@@ -59,10 +69,10 @@ jobs:
         ls -la v1/
         echo "utils directory:"
         ls -la utils/
+        echo "Check if symbolic link works:"
+        ls -la v1/utils/fetchList.js || echo "Symbolic link not working"
         echo "Check if puppeteer is installed:"
         npm list puppeteer
-        echo "Node modules in root:"
-        ls -la node_modules/ | grep -i puppeteer || echo "No puppeteer found in root/node_modules"
 
     - name: Run Script
       working-directory: ./v1
