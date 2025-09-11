@@ -1,22 +1,42 @@
-# .github/workflows/sync-gitee.yml
-name: Sync GitHub to Gitee
+name: Run FetchURL Script on Node.js 21.5.0
+
 on:
-  push:
-    branches: [main]
   schedule:
-    - cron: '0 */3 * * *'  # 每3小时同步
+    - cron: '0 */3 * * *'  # UTC时间每3小时运行
+  workflow_dispatch:
+
 jobs:
-  sync:
+  run-fetch-script:
+    name: Run fetchurl.js
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout code
+      - name: Checkout repository
         uses: actions/checkout@v4
-      - name: Mirror to Gitee
-        uses: Yikun/hub-mirror-action@v1.3
+
+      - name: Setup Node.js 21.5.0
+        uses: actions/setup-node@v4
         with:
-          src: github/GSD-3726/test3911  # GitHub源仓库
-          dst: gitee/bmg369/test          # Gitee目标仓库
-          dst_key: ${{ secrets.GITEE_PRIVATE_KEY }}  # SSH私钥
-          dst_token: ${{ secrets.GITEE_TOKEN }}      # Gitee API Token
-          force_update: true              # 强制同步
-          debug: true                     # 调试模式
+          node-version: '21.5.0'
+          cache: 'npm'
+
+      - name: Install Chromium dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y chromium-browser
+
+      - name: Install npm dependencies
+        run: npm ci --include=optional
+
+      - name: Run fetchurl.js script
+        env:
+          API_KEY: ${{ secrets.API_KEY }}
+          SOME_URL: ${{ secrets.SOME_URL }}
+        run: node fetchurl.js
+
+      - name: Upload generated interface.txt
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: interface-file
+          path: interface.txt
