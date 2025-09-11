@@ -2,12 +2,11 @@ name: Run FetchURL Script on Node.js 21.5.0
 
 on:
   schedule:
-    - cron: '0 */3 * * *'  # UTC时间每3小时运行
+    - cron: '0 */3 * * *'
   workflow_dispatch:
 
 jobs:
   run-fetch-script:
-    name: Run fetchurl.js
     runs-on: ubuntu-latest
 
     steps:
@@ -27,16 +26,17 @@ jobs:
 
       - name: Install npm dependencies
         run: npm ci --include=optional
+        working-directory: ./v1
 
       - name: Run fetchurl.js script
+        run: node fetchurl.js
+        working-directory: ./v1
         env:
           API_KEY: ${{ secrets.API_KEY }}
           SOME_URL: ${{ secrets.SOME_URL }}
-        run: node fetchurl.js
 
       - name: Upload generated interface.txt
-        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: interface-file
-          path: interface.txt
+          path: v1/interface.txt
