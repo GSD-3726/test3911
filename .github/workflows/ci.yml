@@ -27,24 +27,43 @@ jobs:
           v1/package-lock.json
           utils/package-lock.json
 
-    # 安装依赖
+    # 设置环境变量以避免 Chromium 下载问题:cite[1]:cite[6]
+    - name: Set environment variables
+      run: |
+        echo "PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=0" >> $GITHUB_ENV
+        echo "PUPPETEER_EXECUTABLE_PATH=/usr/bin/chromium-browser" >> $GITHUB_ENV
+
+    # 安装系统依赖（包括 Chromium）
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y chromium-browser
+
+    # 安装依赖 - 使用淘宝镜像加速下载:cite[1]:cite[6]
     - name: Install root dependencies
-      run: npm ci
+      run: |
+        npm config set registry https://registry.npmmirror.com/
+        npm ci
 
     - name: Install v1 dependencies
       working-directory: ./v1
-      run: npm ci
+      run: |
+        npm config set registry https://registry.npmmirror.com/
+        npm ci
 
     - name: Install utils dependencies
       working-directory: ./utils
-      run: npm ci
+      run: |
+        npm config set registry https://registry.npmmirror.com/
+        npm ci
+        # 确保 puppeteer 已安装
+        if ! npm list puppeteer; then
+          echo "Installing puppeteer..."
+          npm install puppeteer --save
+        fi
 
-    # 创建符号链接，使 v1/utils 指向根目录的 utils
-    - name: Create symbolic link
-      run: ln -s ../utils v1/utils
-
-    # 调试步骤，列出文件结构确认路径是否正确
-    - name: Debug - List project structure
+    # 调试步骤，列出文件结构和已安装的模块
+    - name: Debug - List project structure and dependencies
       run: |
         echo "Project root:"
         ls -la
@@ -52,16 +71,20 @@ jobs:
         ls -la v1/
         echo "utils directory:"
         ls -la utils/
-        echo "Check if fetchList.js exists:"
-        find . -name "fetchList.js" -type f
-        echo "Check if symbolic link exists:"
-        ls -la v1/utils/
+        echo "Check if puppeteer is installed:"
+        npm list puppeteer --prefix ./utils
+        echo "Node modules in utils:"
+        ls -la utils/node_modules/ | grep -i puppeteer || echo "No puppeteer found in utils/node_modules"
+        echo "Node modules in root:"
+        ls -la node_modules/ | grep -i puppeteer || echo "No puppeteer found in root/node_modules"
 
     - name: Run Script
       working-directory: ./v1
       run: node fetchURL.js
       env:
         CUSTOM_VAR: 'value'
+        # 设置 Chromium 可执行路径
+        PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
 
     - name: Commit and push changes
       if: always()
