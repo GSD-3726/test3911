@@ -27,31 +27,43 @@ jobs:
           v1/package-lock.json
           utils/package-lock.json
 
+    # 获取工作目录的绝对路径
+    - name: Get absolute workspace path
+      id: workspace-path
+      run: echo "ABS_PATH=$(pwd)" >> $GITHUB_OUTPUT
+
+    # 安装依赖
     - name: Install root dependencies
       run: npm ci
 
     - name: Install v1 dependencies
-      working-directory: ./v1
       run: npm ci
+      working-directory: ${{ steps.workspace-path.outputs.ABS_PATH }}/v1
 
     - name: Install utils dependencies
-      working-directory: ./utils
       run: npm ci
+      working-directory: ${{ steps.workspace-path.outputs.ABS_PATH }}/utils
 
-    - name: Debug List files
+    # 调试步骤，列出文件结构确认路径是否正确
+    - name: Debug - List project structure
       run: |
-        echo "Listing project structure:"
+        echo "Project root:"
         ls -la
-        echo "Listing v1 directory:"
+        echo "v1 directory:"
         ls -la v1/
-        echo "Listing utils directory:"
+        echo "utils directory:"
         ls -la utils/
+        echo "Check if fetchList.js exists:"
+        find . -name "fetchList.js" -type f
 
+    # 运行脚本，使用绝对路径
     - name: Run Script
-      working-directory: ./v1
       run: node fetchURL.js
+      working-directory: ${{ steps.workspace-path.outputs.ABS_PATH }}/v1
       env:
         CUSTOM_VAR: 'value'
+        # 设置 NODE_PATH 环境变量，确保 Node.js 能找到 utils 目录中的模块
+        NODE_PATH: ${{ steps.workspace-path.outputs.ABS_PATH }}/utils
 
     - name: Commit and push changes
       if: always()
