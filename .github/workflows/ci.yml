@@ -40,24 +40,13 @@ jobs:
           npm install puppeteer --save
         fi
 
-    # 注释掉了创建符号链接的步骤，因为不再需要运行 v1/fetchURL.js
-    # - name: Create symbolic links
-    #   run: |
-    #     rm -rf v1/utils
-    #     ln -s ../utils v1/utils
-
-    # 注释掉了运行 v1/fetchURL.js 的步骤
-    # - name: Run Script
-    #   working-directory: ./v1
-    #   run: node fetchURL.js
-    #   env:
-    #     PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
-
     # 改为运行根目录下的 fetchURLByAndroidV2.js
     - name: Run fetchURLByAndroidV2.js
       run: node fetchURLByAndroidV2.js
       env:
         PUPPETEER_EXECUTABLE_PATH: '/usr/bin/chromium-browser'
+        USERID: ${{ secrets.USERID }}  # 从 GitHub Secrets 获取 USERID
+        MIGU_TOKEN: ${{ secrets.MIGU_TOKEN }}  # 从 GitHub Secrets 获取 MIGU_TOKEN
 
     - name: Commit and push changes
       if: always()
